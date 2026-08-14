@@ -34,28 +34,90 @@ cargo test
 
 Run tests against a local Stellar testnet sandbox (see CONTRIBUTING.md for setup).
 
+## Phase 1: MVP Implementation
+
+### Implemented ✓
+- **Admin Management**: Multi-admin authorization (initialize, add_admin, remove_admin)
+- **Issuer Registry**: Register issuers with attestation parameters; update status and attestor sets
+- **Single-Attestor Submission**: Submit attestations that finalize immediately (min_signers=1)
+- **Reserve Ratio Calculation**: Fixed-point arithmetic in basis points (no floating point)
+- **Testing**: Unit tests verify core functionality
+
+### Coming in Phase 2
+- Multi-attestor co-signing with threshold finalization
+- Permissionless staleness flagging with events
+- Integration tests on testnet
+
 ## Contract Functions
 
-### Admin
-- `initialize(admin: Address)` — Initialize the contract with an admin
-- `add_admin(caller: Address, new_admin: Address)` — Add an admin (requires existing admin auth)
-- `remove_admin(caller: Address, admin_to_remove: Address)` — Remove an admin (requires existing admin auth)
+### Admin (Phase 1)
+- **`initialize(admin: Address)`** — Initialize the contract with an initial admin
+  - Auth: Self-signed by admin
+  - Returns: None
+  
+- **`add_admin(caller: Address, new_admin: Address)`** — Add a new admin to the multi-admin set
+  - Auth: Requires existing admin
+  - Returns: None
+  
+- **`remove_admin(caller: Address, admin_to_remove: Address)`** — Remove an admin
+  - Auth: Requires existing admin
+  - Returns: None
 
-### Issuer Registry
-- `register_issuer(caller: Address, issuer: Address, name: String, asset: Address, attestation_window_seconds: u64, required_attestors: Vec<Address>, min_signers: u32)` — Register an issuer (requires admin auth)
-- `update_issuer_status(caller: Address, issuer: Address, status: IssuerStatus)` — Update issuer status (requires admin auth)
-- `update_attestors(caller: Address, issuer: Address, required_attestors: Vec<Address>, min_signers: u32)` — Update the attestor set (requires admin auth)
-- `get_issuer(issuer: Address) -> Option<IssuerEntry>` — Fetch issuer details
+### Issuer Registry (Phase 1)
+- **`register_issuer(caller: Address, issuer: Address, name: Symbol, asset: Address, attestation_window_seconds: u64, required_attestors: Vec<Address>, min_signers: u32)`** — Register an issuer
+  - Auth: Requires admin
+  - Parameters:
+    - `issuer`: Address of the issuer (e.g., stablecoin issuer account)
+    - `name`: Human-readable name (Symbol, max 32 chars)
+    - `asset`: Address of the asset being backed
+    - `attestation_window_seconds`: How often attestations must be submitted
+    - `required_attestors`: List of authorized attestor addresses
+    - `min_signers`: Minimum required co-signatures for finalization
+  - Returns: None
+  
+- **`update_issuer_status(caller: Address, issuer: Address, status: IssuerStatus)`** — Suspend or activate an issuer
+  - Auth: Requires admin
+  - Parameters: `status` is `Active` or `Suspended`
+  - Returns: None
+  
+- **`update_attestors(caller: Address, issuer: Address, required_attestors: Vec<Address>, min_signers: u32)`** — Update attestor set
+  - Auth: Requires admin
+  - Returns: None
+  
+- **`get_issuer(issuer: Address) -> Option<IssuerEntry>`** — Fetch issuer details
+  - Auth: Public (no auth required)
+  - Returns: IssuerEntry or None
 
-### Attestation Lifecycle
-- `submit_attestation(caller: Address, issuer: Address, reserve_balance: i128, outstanding_supply: i128, supporting_doc_hash: BytesN<32>) -> BytesN<32>` — Submit a new attestation (caller must be in issuer's required_attestors; returns attestation_id)
-- `co_sign_attestation(caller: Address, attestation_id: BytesN<32>)` — Co-sign an existing attestation (caller must be a required attestor; finalizes if min_signers threshold is met)
-- `get_latest_attestation(issuer: Address) -> Option<Attestation>` — Fetch the latest finalized attestation
-- `get_reserve_ratio(issuer: Address) -> Option<i128>` — Get reserve/supply ratio in basis points (reserve_balance * 10000 / outstanding_supply)
+### Attestation Lifecycle (Phase 1)
+- **`submit_attestation(caller: Address, issuer: Address, reserve_balance: i128, outstanding_supply: i128, supporting_doc_hash: BytesN<32>) -> BytesN<32>`** — Submit a reserve attestation
+  - Auth: Caller must be in issuer's required_attestors
+  - Parameters:
+    - `reserve_balance`: Amount of reserves (smallest units of the reporting currency)
+    - `outstanding_supply`: Amount of tokens in circulation
+    - `supporting_doc_hash`: SHA-256 hash of off-chain audit document
+  - Behavior: If `min_signers=1`, attestation finalizes immediately and becomes current
+  - Returns: `attestation_id` (SHA-256 hash used for co-signing)
+  
+- **`co_sign_attestation(caller: Address, attestation_id: BytesN<32>)`** — Co-sign an existing attestation
+  - Auth: Caller must be a required attestor
+  - Behavior: Increments signer count; finalizes if threshold met (Phase 2)
+  - Returns: None
+  
+- **`get_latest_attestation(issuer: Address) -> Option<Attestation>`** — Fetch the current finalized attestation
+  - Auth: Public
+  - Returns: Latest finalized Attestation or None
+  
+- **`get_reserve_ratio(issuer: Address) -> Option<i128>`** — Get current reserve ratio
+  - Auth: Public
+  - Returns: `(reserve_balance * 10000) / outstanding_supply` in basis points, or None
 
-### Staleness Watchdog
-- `is_stale(issuer: Address) -> bool` — Check if the latest attestation is stale (beyond attestation_window_seconds)
-- `flag_stale(issuer: Address)` — Flag an issuer as stale if the window has elapsed (permissionless; emits issuer_flagged_stale event)
+### Staleness Watchdog (Phase 2)
+- **`is_stale(issuer: Address) -> bool`** — Check staleness
+  - Returns: true if latest attestation age exceeds attestation_window_seconds
+  
+- **`flag_stale(issuer: Address)`** — Permissionless staleness flag
+  - Auth: None (permissionless)
+  - Behavior: Emits event if issuer is stale (Phase 2)
 
 ## Deployment
 
