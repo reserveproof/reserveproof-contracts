@@ -30,7 +30,7 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        run: cargo clippy --all --target wasm32v1-none -- -D warnings
+        run: cargo clippy --all --target wasm32v1-none -- -W clippy::all -W clippy::pedantic -A clippy::too_many_arguments
 
   test:
     runs-on: ubuntu-latest

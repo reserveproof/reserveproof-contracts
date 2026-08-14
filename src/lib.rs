@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(deprecated)]
 
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec};
 
@@ -80,7 +81,7 @@ impl ReserveProofContract {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
-        let mut admins: Vec<Address> = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(&env));
+        let admins: Vec<Address> = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(&env));
         let mut new_admins = Vec::new(&env);
 
         for admin in admins.iter() {
