@@ -46,6 +46,10 @@ const ATTESTATION_PREFIX: Symbol = symbol_short!("attest");
 // Events
 const EVENT_ATTESTATION_FINALIZED: Symbol = symbol_short!("finalized");
 const EVENT_ISSUER_FLAGGED_STALE: Symbol = symbol_short!("stale");
+const EVENT_ISSUER_REGISTERED: Symbol = symbol_short!("iss_reg");
+const EVENT_ATTESTATION_SUBMITTED: Symbol = symbol_short!("submitted");
+const EVENT_ATTESTATION_COSIGNED: Symbol = symbol_short!("cosigned");
+const EVENT_ISSUER_UPDATED: Symbol = symbol_short!("iss_upd");
 
 #[contract]
 pub struct ReserveProofContract;
@@ -113,6 +117,7 @@ impl ReserveProofContract {
 
         let key = Self::issuer_key(&issuer);
         env.storage().instance().set(&key, &entry);
+        env.events().publish((EVENT_ISSUER_REGISTERED,), &issuer);
     }
 
     pub fn update_issuer_status(env: Env, caller: Address, issuer: Address, status: IssuerStatus) {
@@ -123,6 +128,7 @@ impl ReserveProofContract {
         let mut entry: IssuerEntry = env.storage().instance().get(&key).expect("Issuer not found");
         entry.status = status;
         env.storage().instance().set(&key, &entry);
+        env.events().publish((EVENT_ISSUER_UPDATED,), &issuer);
     }
 
     pub fn update_attestors(
@@ -140,6 +146,7 @@ impl ReserveProofContract {
         entry.required_attestors = required_attestors;
         entry.min_signers = min_signers;
         env.storage().instance().set(&key, &entry);
+        env.events().publish((EVENT_ISSUER_UPDATED,), &issuer);
     }
 
     pub fn get_issuer(env: Env, issuer: Address) -> Option<IssuerEntry> {
@@ -193,6 +200,8 @@ impl ReserveProofContract {
         let attest_key = Self::attestation_key(&attestation_id);
         env.storage().instance().set(&attest_key, &attestation);
 
+        env.events().publish((EVENT_ATTESTATION_SUBMITTED,), (&issuer, &attestation_id));
+
         if issuer_entry.min_signers <= 1 {
             let latest_key = Self::latest_attestation_key(&issuer);
             env.storage().instance().set(&latest_key, &attestation_id.clone());
@@ -230,7 +239,9 @@ impl ReserveProofContract {
         }
         assert!(!already_signed, "Caller has already signed");
 
-        attestation.signers.push_back(caller);
+        attestation.signers.push_back(caller.clone());
+
+        env.events().publish((EVENT_ATTESTATION_COSIGNED,), (&attestation.issuer, &attestation_id, &caller));
 
         if attestation.signers.len() as u32 >= issuer_entry.min_signers {
             attestation.state = AttestationState::Finalized;
@@ -243,6 +254,11 @@ impl ReserveProofContract {
         }
 
         env.storage().instance().set(&attest_key, &attestation);
+    }
+
+    pub fn get_attestation(env: Env, attestation_id: BytesN<32>) -> Option<Attestation> {
+        let attest_key = Self::attestation_key(&attestation_id);
+        env.storage().instance().get(&attest_key)
     }
 
     pub fn get_latest_attestation(env: Env, issuer: Address) -> Option<Attestation> {
