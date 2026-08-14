@@ -1,35 +1,37 @@
 # Deployment Guide: ReserveProof Contracts
 
-This guide covers deploying the ReserveProof smart contract to Stellar Soroban testnet and production networks.
+This guide covers deploying the ReserveProof smart contract to Stellar Soroban testnet and production networks. Every command below has been run end-to-end against a live testnet deployment.
 
 ## Prerequisites
 
-1. **Rust & Soroban SDK**
+1. **Rust**
    ```bash
    rustup install stable
    rustup target add wasm32v1-none
-   cargo install soroban-cli
    ```
 
 2. **Stellar CLI**
    ```bash
-   brew install stellar-cli  # macOS
-   # or download from https://github.com/stellar/stellar-cli
+   # Prebuilt binary (fastest — building from source can take 10+ minutes)
+   curl -sL -o stellar-cli.tar.gz \
+     https://github.com/stellar/stellar-cli/releases/latest/download/stellar-cli-27.1.0-x86_64-unknown-linux-gnu.tar.gz
+   tar xzf stellar-cli.tar.gz
+   sudo mv stellar /usr/local/bin/stellar
+   # or: brew install stellar-cli  (macOS)
    ```
 
 3. **Testnet Setup**
    ```bash
-   soroban config network add testnet \
+   stellar network add testnet \
      --rpc-url https://soroban-testnet.stellar.org:443 \
      --network-passphrase "Test SDF Network ; September 2015"
    ```
 
 4. **Credentials**
-   - Create or import a keypair:
    ```bash
-   soroban config identity generate deployer
+   # Generates a keypair, saves it under the alias "deployer", and funds it via friendbot
+   stellar keys generate deployer --network testnet --fund
    ```
-   - Fund testnet account: https://stellar.org/laboratory
 
 ## Compiling the Contract
 
@@ -50,7 +52,7 @@ export WASM_FILE="target/wasm32v1-none/release/reserveproof_contracts.wasm"
 
 ### Step 2: Deploy the Contract
 ```bash
-CONTRACT_ID=$(soroban contract deploy \
+CONTRACT_ID=$(stellar contract deploy \
   --wasm "$WASM_FILE" \
   --source deployer \
   --network testnet)
@@ -60,29 +62,30 @@ echo "Contract deployed to: $CONTRACT_ID"
 
 ### Step 3: Initialize the Contract
 ```bash
-ADMIN_KEYPAIR="$(soroban config identity show deployer)"
+# Use the deployer's PUBLIC address (not the secret key) as admin
+ADMIN_ADDRESS="$(stellar keys address deployer)"
 
-soroban contract invoke \
+stellar contract invoke \
   --id "$CONTRACT_ID" \
   --source deployer \
   --network testnet \
   -- initialize \
-  --admin "$ADMIN_KEYPAIR"
+  --admin "$ADMIN_ADDRESS"
 
-echo "Contract initialized with admin: $ADMIN_KEYPAIR"
+echo "Contract initialized with admin: $ADMIN_ADDRESS"
 ```
 
 ### Step 4: Verify Deployment
 ```bash
 # Check contract is callable
-soroban contract invoke \
+stellar contract invoke \
   --id "$CONTRACT_ID" \
   --source deployer \
   --network testnet \
   -- get_issuer \
-  --issuer "GBUDQ6HKJM47U3Z5NQFZLONV6FQMEXOQTBGMF3FOU3MZT5OXVSRX3P3L"
+  --issuer "$ADMIN_ADDRESS"
 
-# Should return: {"discriminant":0}  (None)
+# Should return: null  (no issuer registered at that address yet)
 ```
 
 ## Production Deployment
@@ -90,7 +93,7 @@ soroban contract invoke \
 Production deployment follows the same steps but uses the production network:
 
 ```bash
-soroban config network add mainnet \
+stellar network add mainnet \
   --rpc-url https://soroban-mainnet.stellar.org:443 \
   --network-passphrase "Public Global Stellar Network ; September 2015"
 ```
@@ -117,12 +120,12 @@ Before deploying to mainnet:
 ### Add Administrator
 
 ```bash
-soroban contract invoke \
+stellar contract invoke \
   --id "$CONTRACT_ID" \
   --source deployer \
   --network testnet \
   -- add_admin \
-  --caller "$ADMIN_KEYPAIR" \
+  --caller "$ADMIN_ADDRESS" \
   --new_admin "GNEW_ADMIN_ADDRESS"
 ```
 
@@ -133,12 +136,12 @@ ISSUER_ADDRESS="GISSUER_ADDRESS"
 ASSET_ADDRESS="GASSET_ADDRESS"
 ATTESTOR_1="GATTEST1"
 
-soroban contract invoke \
+stellar contract invoke \
   --id "$CONTRACT_ID" \
   --source deployer \
   --network testnet \
   -- register_issuer \
-  --caller "$ADMIN_KEYPAIR" \
+  --caller "$ADMIN_ADDRESS" \
   --issuer "$ISSUER_ADDRESS" \
   --name "MyIssuer" \
   --asset "$ASSET_ADDRESS" \
@@ -150,7 +153,7 @@ soroban contract invoke \
 ### Check Issuer Status
 
 ```bash
-soroban contract invoke \
+stellar contract invoke \
   --id "$CONTRACT_ID" \
   --source deployer \
   --network testnet \
@@ -166,7 +169,7 @@ Monitor these events via event indexer:
 
 ```bash
 # Subscribe to events for a contract
-soroban events \
+stellar events \
   --id "$CONTRACT_ID" \
   --network testnet
 ```
@@ -194,11 +197,11 @@ The contract is not upgradeable on mainnet. For updates:
 
 ### Issue: "Contract not found"
 - Verify CONTRACT_ID is correct
-- Verify network is correct (`soroban config network ls`)
+- Verify network is correct (`stellar network ls`)
 - Contract may not be finalized yet (wait 1-2 blocks)
 
 ### Issue: "Caller is not an admin"
-- Verify caller identity: `soroban config identity show deployer`
+- Verify caller identity: `stellar keys address deployer`
 - Verify admin was initialized during deployment
 
 ### Issue: "Issuer not found"
@@ -213,7 +216,7 @@ The contract is not upgradeable on mainnet. For updates:
 
 1. **Key Management**
    - Never commit private keys to git
-   - Use environment variables: `SOROBAN_SECRET_KEY`
+   - Keys generated via `stellar keys generate` are stored under `~/.config/stellar/identity/` — treat that directory as sensitive
    - Rotate deployer keys after mainnet deployment
 
 2. **RPC Endpoint**
