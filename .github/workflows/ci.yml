@@ -7,6 +7,31 @@ on:
     branches: [main]
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+          components: clippy
+
+      - name: Run clippy
+        run: cargo clippy --all --target wasm32v1-none -- -D warnings
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -37,6 +62,17 @@ jobs:
 
       - name: Run tests
         run: cargo test --all
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run security audit
+        run: cargo audit
 
   build:
     runs-on: ubuntu-latest
