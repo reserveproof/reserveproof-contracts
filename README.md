@@ -22,8 +22,8 @@ Requires:
 - Stellar CLI (https://developers.stellar.org/docs/build/smart-contracts/getting-started)
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo build --target wasm32-unknown-unknown --release
+rustup target add wasm32v1-none
+cargo build --target wasm32v1-none --release
 ```
 
 ## Testing

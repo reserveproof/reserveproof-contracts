@@ -3,7 +3,7 @@
 ## Local Development Setup
 
 ### Prerequisites
-- Rust 1.84+ with `wasm32-unknown-unknown` target
+- Rust 1.84+ with `wasm32v1-none` target
 - Stellar CLI (https://developers.stellar.org/docs/build/smart-contracts/getting-started)
 
 ### Build
