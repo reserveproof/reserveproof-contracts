@@ -105,6 +105,10 @@ impl ReserveProofContract {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        assert!(min_signers > 0, "min_signers must be at least 1");
+        assert!(attestation_window_seconds > 0, "attestation_window_seconds must be positive");
+        assert!(required_attestors.len() as u32 >= min_signers, "required_attestors length must be >= min_signers");
+
         let entry = IssuerEntry {
             address: issuer.clone(),
             name,
@@ -141,6 +145,9 @@ impl ReserveProofContract {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        assert!(min_signers > 0, "min_signers must be at least 1");
+        assert!(required_attestors.len() as u32 >= min_signers, "required_attestors length must be >= min_signers");
+
         let key = Self::issuer_key(&issuer);
         let mut entry: IssuerEntry = env.storage().instance().get(&key).expect("Issuer not found");
         entry.required_attestors = required_attestors;
@@ -163,6 +170,9 @@ impl ReserveProofContract {
         supporting_doc_hash: BytesN<32>,
     ) -> BytesN<32> {
         caller.require_auth();
+
+        assert!(reserve_balance >= 0, "reserve_balance cannot be negative");
+        assert!(outstanding_supply >= 0, "outstanding_supply cannot be negative");
 
         let issuer_entry: IssuerEntry = env.storage().instance().get(&Self::issuer_key(&issuer)).expect("Issuer not found");
 
