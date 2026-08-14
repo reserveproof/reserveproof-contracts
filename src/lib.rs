@@ -1,7 +1,9 @@
 #![no_std]
 #![allow(deprecated)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec,
+};
 
 #[contracttype]
 pub enum IssuerStatus {
@@ -61,7 +63,11 @@ impl ReserveProofContract {
         admin.require_auth();
 
         let admins: Vec<Address> = {
-            let mut v = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(&env));
+            let mut v = env
+                .storage()
+                .instance()
+                .get(&ADMIN_SET)
+                .unwrap_or(Vec::new(&env));
             v.push_back(admin);
             v
         };
@@ -72,7 +78,11 @@ impl ReserveProofContract {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
-        let mut admins: Vec<Address> = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(&env));
+        let mut admins: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&ADMIN_SET)
+            .unwrap_or(Vec::new(&env));
         admins.push_back(new_admin);
         env.storage().instance().set(&ADMIN_SET, &admins);
     }
@@ -81,7 +91,11 @@ impl ReserveProofContract {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
-        let admins: Vec<Address> = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(&env));
+        let admins: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&ADMIN_SET)
+            .unwrap_or(Vec::new(&env));
         let mut new_admins = Vec::new(&env);
 
         for admin in admins.iter() {
@@ -107,8 +121,14 @@ impl ReserveProofContract {
         Self::require_admin(&env, &caller);
 
         assert!(min_signers > 0, "min_signers must be at least 1");
-        assert!(attestation_window_seconds > 0, "attestation_window_seconds must be positive");
-        assert!(required_attestors.len() as u32 >= min_signers, "required_attestors length must be >= min_signers");
+        assert!(
+            attestation_window_seconds > 0,
+            "attestation_window_seconds must be positive"
+        );
+        assert!(
+            required_attestors.len() as u32 >= min_signers,
+            "required_attestors length must be >= min_signers"
+        );
 
         let entry = IssuerEntry {
             address: issuer.clone(),
@@ -130,7 +150,11 @@ impl ReserveProofContract {
         Self::require_admin(&env, &caller);
 
         let key = Self::issuer_key(&issuer);
-        let mut entry: IssuerEntry = env.storage().instance().get(&key).expect("Issuer not found");
+        let mut entry: IssuerEntry = env
+            .storage()
+            .instance()
+            .get(&key)
+            .expect("Issuer not found");
         entry.status = status;
         env.storage().instance().set(&key, &entry);
         env.events().publish((EVENT_ISSUER_UPDATED,), &issuer);
@@ -147,10 +171,17 @@ impl ReserveProofContract {
         Self::require_admin(&env, &caller);
 
         assert!(min_signers > 0, "min_signers must be at least 1");
-        assert!(required_attestors.len() as u32 >= min_signers, "required_attestors length must be >= min_signers");
+        assert!(
+            required_attestors.len() as u32 >= min_signers,
+            "required_attestors length must be >= min_signers"
+        );
 
         let key = Self::issuer_key(&issuer);
-        let mut entry: IssuerEntry = env.storage().instance().get(&key).expect("Issuer not found");
+        let mut entry: IssuerEntry = env
+            .storage()
+            .instance()
+            .get(&key)
+            .expect("Issuer not found");
         entry.required_attestors = required_attestors;
         entry.min_signers = min_signers;
         env.storage().instance().set(&key, &entry);
@@ -173,9 +204,16 @@ impl ReserveProofContract {
         caller.require_auth();
 
         assert!(reserve_balance >= 0, "reserve_balance cannot be negative");
-        assert!(outstanding_supply >= 0, "outstanding_supply cannot be negative");
+        assert!(
+            outstanding_supply >= 0,
+            "outstanding_supply cannot be negative"
+        );
 
-        let issuer_entry: IssuerEntry = env.storage().instance().get(&Self::issuer_key(&issuer)).expect("Issuer not found");
+        let issuer_entry: IssuerEntry = env
+            .storage()
+            .instance()
+            .get(&Self::issuer_key(&issuer))
+            .expect("Issuer not found");
 
         let mut is_required = false;
         for attestor in issuer_entry.required_attestors.iter() {
@@ -190,8 +228,14 @@ impl ReserveProofContract {
         signers.push_back(caller.clone());
 
         let mut seed_data = Bytes::new(&env);
-        seed_data.append(&Bytes::from_slice(&env, &env.ledger().sequence().to_le_bytes()));
-        seed_data.append(&Bytes::from_slice(&env, &env.ledger().timestamp().to_le_bytes()));
+        seed_data.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().sequence().to_le_bytes(),
+        ));
+        seed_data.append(&Bytes::from_slice(
+            &env,
+            &env.ledger().timestamp().to_le_bytes(),
+        ));
         let hash = env.crypto().sha256(&seed_data);
         let attestation_id: BytesN<32> = hash.into();
         let now = env.ledger().timestamp();
@@ -203,20 +247,32 @@ impl ReserveProofContract {
             outstanding_supply,
             supporting_doc_hash,
             signers,
-            state: if issuer_entry.min_signers <= 1 { AttestationState::Finalized } else { AttestationState::Pending },
+            state: if issuer_entry.min_signers <= 1 {
+                AttestationState::Finalized
+            } else {
+                AttestationState::Pending
+            },
             submitted_at: now,
-            finalized_at: if issuer_entry.min_signers <= 1 { Some(now) } else { None },
+            finalized_at: if issuer_entry.min_signers <= 1 {
+                Some(now)
+            } else {
+                None
+            },
         };
 
         let attest_key = Self::attestation_key(&attestation_id);
         env.storage().instance().set(&attest_key, &attestation);
 
-        env.events().publish((EVENT_ATTESTATION_SUBMITTED,), (&issuer, &attestation_id));
+        env.events()
+            .publish((EVENT_ATTESTATION_SUBMITTED,), (&issuer, &attestation_id));
 
         if issuer_entry.min_signers <= 1 {
             let latest_key = Self::latest_attestation_key(&issuer);
-            env.storage().instance().set(&latest_key, &attestation_id.clone());
-            env.events().publish((EVENT_ATTESTATION_FINALIZED,), (&issuer, &attestation_id));
+            env.storage()
+                .instance()
+                .set(&latest_key, &attestation_id.clone());
+            env.events()
+                .publish((EVENT_ATTESTATION_FINALIZED,), (&issuer, &attestation_id));
         }
 
         attestation_id
@@ -226,11 +282,22 @@ impl ReserveProofContract {
         caller.require_auth();
 
         let attest_key = Self::attestation_key(&attestation_id);
-        let mut attestation: Attestation = env.storage().instance().get(&attest_key).expect("Attestation not found");
+        let mut attestation: Attestation = env
+            .storage()
+            .instance()
+            .get(&attest_key)
+            .expect("Attestation not found");
 
-        assert!(!matches!(attestation.state, AttestationState::Finalized), "Attestation already finalized");
+        assert!(
+            !matches!(attestation.state, AttestationState::Finalized),
+            "Attestation already finalized"
+        );
 
-        let issuer_entry: IssuerEntry = env.storage().instance().get(&Self::issuer_key(&attestation.issuer.clone())).expect("Issuer not found");
+        let issuer_entry: IssuerEntry = env
+            .storage()
+            .instance()
+            .get(&Self::issuer_key(&attestation.issuer.clone()))
+            .expect("Issuer not found");
 
         let mut is_required = false;
         for attestor in issuer_entry.required_attestors.iter() {
@@ -252,16 +319,24 @@ impl ReserveProofContract {
 
         attestation.signers.push_back(caller.clone());
 
-        env.events().publish((EVENT_ATTESTATION_COSIGNED,), (&attestation.issuer, &attestation_id, &caller));
+        env.events().publish(
+            (EVENT_ATTESTATION_COSIGNED,),
+            (&attestation.issuer, &attestation_id, &caller),
+        );
 
         if attestation.signers.len() as u32 >= issuer_entry.min_signers {
             attestation.state = AttestationState::Finalized;
             attestation.finalized_at = Some(env.ledger().timestamp());
 
             let latest_key = Self::latest_attestation_key(&attestation.issuer);
-            env.storage().instance().set(&latest_key, &attestation_id.clone());
+            env.storage()
+                .instance()
+                .set(&latest_key, &attestation_id.clone());
 
-            env.events().publish((EVENT_ATTESTATION_FINALIZED,), (&attestation.issuer, &attestation_id));
+            env.events().publish(
+                (EVENT_ATTESTATION_FINALIZED,),
+                (&attestation.issuer, &attestation_id),
+            );
         }
 
         env.storage().instance().set(&attest_key, &attestation);
@@ -297,7 +372,11 @@ impl ReserveProofContract {
     pub fn is_stale(env: Env, issuer: Address) -> bool {
         if let Some(attestation) = Self::get_latest_attestation(env.clone(), issuer.clone()) {
             if let Some(finalized_at) = attestation.finalized_at {
-                let issuer_entry: IssuerEntry = env.storage().instance().get(&Self::issuer_key(&issuer)).expect("Issuer not found");
+                let issuer_entry: IssuerEntry = env
+                    .storage()
+                    .instance()
+                    .get(&Self::issuer_key(&issuer))
+                    .expect("Issuer not found");
                 let now = env.ledger().timestamp();
                 return now > finalized_at + issuer_entry.attestation_window_seconds;
             }
@@ -312,7 +391,11 @@ impl ReserveProofContract {
     }
 
     fn require_admin(env: &Env, caller: &Address) {
-        let admins: Vec<Address> = env.storage().instance().get(&ADMIN_SET).unwrap_or(Vec::new(env));
+        let admins: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&ADMIN_SET)
+            .unwrap_or(Vec::new(env));
 
         let mut is_admin = false;
         for admin in admins.iter() {

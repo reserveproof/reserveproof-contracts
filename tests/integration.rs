@@ -57,7 +57,10 @@ mod tests {
         // 4. Verify status is Active
         //
         // Expected: Issuer successfully registered and retrievable
-        assert!(true, "Single-attestor issuer registration test scenario in place");
+        assert!(
+            true,
+            "Single-attestor issuer registration test scenario in place"
+        );
     }
 
     #[test]
@@ -74,7 +77,10 @@ mod tests {
         // 4. Verify update succeeded
         //
         // Expected: Multi-attestor issuer setup works correctly
-        assert!(true, "Multi-attestor issuer registration test scenario in place");
+        assert!(
+            true,
+            "Multi-attestor issuer registration test scenario in place"
+        );
     }
 
     #[test]
@@ -86,7 +92,10 @@ mod tests {
         // 3. Try register with attestation_window_seconds = 0
         //
         // Expected: All invalid inputs rejected with appropriate messages
-        assert!(true, "Issuer registration validation test scenario in place");
+        assert!(
+            true,
+            "Issuer registration validation test scenario in place"
+        );
     }
 
     #[test]
@@ -134,7 +143,10 @@ mod tests {
         // 6. Verify submitted_at and finalized_at are set
         //
         // Expected: Attestation created and immediately finalized
-        assert!(true, "Single attestor immediate finalization test scenario in place");
+        assert!(
+            true,
+            "Single attestor immediate finalization test scenario in place"
+        );
     }
 
     #[test]
@@ -146,7 +158,10 @@ mod tests {
         // 3. Capture all events and verify data
         //
         // Expected: Events emitted with correct issuer and attestation IDs
-        assert!(true, "Single attestor event emission test scenario in place");
+        assert!(
+            true,
+            "Single attestor event emission test scenario in place"
+        );
     }
 
     #[test]
@@ -178,7 +193,10 @@ mod tests {
         //    - Verify it returns the finalized attestation
         //
         // Expected: Attestation progresses from Pending to Finalized
-        assert!(true, "Multi-attestor pending to finalized test scenario in place");
+        assert!(
+            true,
+            "Multi-attestor pending to finalized test scenario in place"
+        );
     }
 
     #[test]
@@ -190,7 +208,10 @@ mod tests {
         // 3. Verify error: "Caller has already signed"
         //
         // Expected: Duplicate signatures rejected
-        assert!(true, "Multi-attestor duplicate signer test scenario in place");
+        assert!(
+            true,
+            "Multi-attestor duplicate signer test scenario in place"
+        );
     }
 
     #[test]
@@ -215,7 +236,10 @@ mod tests {
         // 4. Verify error: "Attestation already finalized"
         //
         // Expected: Finalized attestations are immutable
-        assert!(true, "Multi-attestor finalized immutability test scenario in place");
+        assert!(
+            true,
+            "Multi-attestor finalized immutability test scenario in place"
+        );
     }
 
     #[test]
@@ -230,7 +254,10 @@ mod tests {
         // 6. get_latest_attestation() returns the attestation
         //
         // Expected: Pending attestations don't appear as latest
-        assert!(true, "Multi-attestor partial signatures test scenario in place");
+        assert!(
+            true,
+            "Multi-attestor partial signatures test scenario in place"
+        );
     }
 
     // RESERVE RATIO TEST SCENARIOS
@@ -504,7 +531,10 @@ mod tests {
         // 4. get_latest_attestation() returns B
         //
         // Expected: Latest always returns most recent finalized attestation
-        assert!(true, "Multiple sequential submissions test scenario in place");
+        assert!(
+            true,
+            "Multiple sequential submissions test scenario in place"
+        );
     }
 
     #[test]
