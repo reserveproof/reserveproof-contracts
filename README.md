@@ -34,19 +34,28 @@ cargo test
 
 Run tests against a local Stellar testnet sandbox (see CONTRIBUTING.md for setup).
 
-## Phase 1: MVP Implementation
+## Implementation Status
 
-### Implemented ✓
+### Phase 1: MVP ✓ Complete
 - **Admin Management**: Multi-admin authorization (initialize, add_admin, remove_admin)
 - **Issuer Registry**: Register issuers with attestation parameters; update status and attestor sets
 - **Single-Attestor Submission**: Submit attestations that finalize immediately (min_signers=1)
 - **Reserve Ratio Calculation**: Fixed-point arithmetic in basis points (no floating point)
-- **Testing**: Unit tests verify core functionality
+- **Testing**: 3/3 unit tests passing
 
-### Coming in Phase 2
-- Multi-attestor co-signing with threshold finalization
-- Permissionless staleness flagging with events
-- Integration tests on testnet
+### Phase 2: Multi-Attestor + Events ✓ Complete
+- **Multi-Attestor Co-Signing**: Multiple signers can co-sign attestations with configurable thresholds
+- **Threshold Finalization**: Attestation finalizes when signers >= min_signers
+- **Staleness Detection**: `is_stale()` checks if attestation exceeds window; `flag_stale()` is permissionless
+- **Event Emissions**: 
+  - `EVENT_ATTESTATION_FINALIZED(issuer, attestation_id)` when threshold is met
+  - `EVENT_ISSUER_FLAGGED_STALE(issuer)` when staleness is detected
+- **Testing**: 3/3 unit tests + 4/4 integration tests passing
+
+### Next: Testnet Deployment
+- Deploy WASM to Stellar Testnet
+- Document contract ID in this README
+- End-to-end testing with mock issuers
 
 ## Contract Functions
 
@@ -111,15 +120,32 @@ Run tests against a local Stellar testnet sandbox (see CONTRIBUTING.md for setup
   - Auth: Public
   - Returns: `(reserve_balance * 10000) / outstanding_supply` in basis points, or None
 
-### Staleness Watchdog (Phase 2)
+### Staleness Watchdog (Phase 2) ✓
 - **`is_stale(issuer: Address) -> bool`** — Check staleness
+  - Auth: Public
   - Returns: true if latest attestation age exceeds attestation_window_seconds
   
 - **`flag_stale(issuer: Address)`** — Permissionless staleness flag
-  - Auth: None (permissionless)
-  - Behavior: Emits event if issuer is stale (Phase 2)
+  - Auth: None (permissionless — anyone can call)
+  - Emits: `EVENT_ISSUER_FLAGGED_STALE(issuer)` if staleness detected
+
+## Events
+
+The contract emits the following events (indexed by Soroban):
+
+- **`EVENT_ATTESTATION_FINALIZED(issuer: Address, attestation_id: BytesN<32>)`**
+  - Emitted when an attestation reaches the min_signers threshold and is finalized
+  - Either from `submit_attestation` (single-attestor) or `co_sign_attestation` (multi-attestor)
+  - Useful for dashboards to track when reserve data is locked in
+
+- **`EVENT_ISSUER_FLAGGED_STALE(issuer: Address)`**
+  - Emitted when `flag_stale()` is called and the issuer's attestation exceeds the attestation window
+  - Permissionless — anyone can trigger this event
+  - Dashboard can use this to alert users that reserve data is stale
 
 ## Deployment
+
+See CONTRIBUTING.md for testnet deployment steps.
 
 See CONTRIBUTING.md for testnet deployment steps.
 
