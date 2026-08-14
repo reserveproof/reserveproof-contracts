@@ -43,6 +43,10 @@ const ISSUER_PREFIX: Symbol = symbol_short!("issuer");
 const LATEST_ATTESTATION_PREFIX: Symbol = symbol_short!("latest");
 const ATTESTATION_PREFIX: Symbol = symbol_short!("attest");
 
+// Events
+const EVENT_ATTESTATION_FINALIZED: Symbol = symbol_short!("finalized");
+const EVENT_ISSUER_FLAGGED_STALE: Symbol = symbol_short!("stale");
+
 #[contract]
 pub struct ReserveProofContract;
 
@@ -191,7 +195,8 @@ impl ReserveProofContract {
 
         if issuer_entry.min_signers <= 1 {
             let latest_key = Self::latest_attestation_key(&issuer);
-            env.storage().instance().set(&latest_key, &attestation_id);
+            env.storage().instance().set(&latest_key, &attestation_id.clone());
+            env.events().publish((EVENT_ATTESTATION_FINALIZED,), (&issuer, &attestation_id));
         }
 
         attestation_id
@@ -232,7 +237,9 @@ impl ReserveProofContract {
             attestation.finalized_at = Some(env.ledger().timestamp());
 
             let latest_key = Self::latest_attestation_key(&attestation.issuer);
-            env.storage().instance().set(&latest_key, &attestation_id);
+            env.storage().instance().set(&latest_key, &attestation_id.clone());
+
+            env.events().publish((EVENT_ATTESTATION_FINALIZED,), (&attestation.issuer, &attestation_id));
         }
 
         env.storage().instance().set(&attest_key, &attestation);
@@ -272,8 +279,8 @@ impl ReserveProofContract {
     }
 
     pub fn flag_stale(env: Env, issuer: Address) {
-        if Self::is_stale(env, issuer) {
-            // Emit event - implementation in Phase 2
+        if Self::is_stale(env.clone(), issuer.clone()) {
+            env.events().publish((EVENT_ISSUER_FLAGGED_STALE,), issuer);
         }
     }
 
